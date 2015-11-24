@@ -1,0 +1,10 @@
+{
+	"name": "kali",
+	"version": "0.0.1",
+	"author": "Vivek Panyam <viv.panyam@gmail.com>",
+	"dependencies": {
+		"webpack": "latest",
+		"ts-loader": "latest",
+		"typescript": "latest"
+	}
+}
