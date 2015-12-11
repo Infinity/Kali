@@ -7,7 +7,7 @@ From Wikipedia:
 Kali uses a WSOLA-like algorithm to do high-quality time stretching in the browser
 
 ##Demo
-Coming Soon
+Try a demo [here](http://infinity.github.io/Kali/demo.html).
 
 ##Getting Started
 
@@ -41,7 +41,7 @@ That's it! See `Test.ts` in the examples folder for a complete example of usage.
 
 ##Documentation
 
-For complete documentation, see [https://kali.readme.io/](https://kali.readme.io/)
+For complete documentation, see [https://kali.readme.io/docs](https://kali.readme.io/docs)
 
 ##Efficiency
 By using TypedArrays and views on TypedArrays, Kali operates very efficiently. That said, this is an early release and performance hasn't been optimized as much as possible. Pull requests are welcome!
