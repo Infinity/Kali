@@ -15,7 +15,7 @@ body {
 <p>This demo shows time stretching independent of pitch. See <a href="https://github.com/Infinity/Kali">here</a> for more info. The stretch factor in the form below describes how to change playback speed. For example, 2 will play the song back twice as fast and 0.5 will play the song half as fast. Slowing down the audio is generally more computationally intensive than speeding it up.
 <ol>
 	<li>Drop an MP3 anywhere on this page: <b id="fname">None Selected</b></li>
-	<li>Enter a Stretch Factor: <input id="rate" type="number" value="0.94"></input></li>
+	<li>Enter a Stretch Factor (values between 0.9 and 2 work well): <input id="rate" type="number" value="0.94"></input></li>
 	<li>Use a faster algorithm? (possibly lower quality on certain inputs) <input type="checkbox" id="quickseek"></input></li>
 	<li><button onclick="play()">Stretch!</button></li>
 </ol>
