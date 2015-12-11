@@ -44,7 +44,7 @@ body {
  */
 
 
-var context = new (AudioContext)();
+var context = new (webkitAudioContext || AudioContext)();
 
 
 function doStretch(inputData, stretchFactor, numChannels) {
@@ -56,7 +56,7 @@ function doStretch(inputData, stretchFactor, numChannels) {
 	kali.setup(context.sampleRate, stretchFactor, document.getElementById("quickseek").checked);
 
 	// Create an array for the stretched output
-	var completed = new Float32Array((numInputFrames / stretchFactor) * numChannels + 1);
+	var completed = new Float32Array(Math.floor((numInputFrames / stretchFactor) * numChannels + 1));
 
 	var inputOffset = 0;
 	var completedOffset = 0;
@@ -104,7 +104,7 @@ function play() {
 		var source = context.createBufferSource();
 		source.buffer = outputAudioBuffer;
 		source.connect(context.destination);
-		source.start();
+		source.start(0);
 	})
 }
 
