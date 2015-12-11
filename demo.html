@@ -1,0 +1,140 @@
+<html>
+<head>
+<title>Kali Example</title>
+<link href='https://fonts.googleapis.com/css?family=Roboto:300' rel='stylesheet' type='text/css'>
+<style type="text/css">
+body {
+	font-family: 'Roboto', sans-serif;
+	background: #fafafa;
+	padding: 20px;
+}
+</style>
+</head>
+<body id="drop_zone">
+<h1>Kali Time-Stretching Demo</h1>
+<p>This demo shows time stretching independent of pitch. See <a href="https://github.com/Infinity/Kali">here</a> for more info. The stretch factor in the form below describes how to change playback speed. For example, 2 will play the song back twice as fast and 0.5 will play the song half as fast. Slowing down the audio is generally more computationally intensive than speeding it up.
+<ol>
+	<li>Drop an MP3 anywhere on this page: <b id="fname">None Selected</b></li>
+	<li>Enter a Stretch Factor: <input id="rate" type="number" value="0.94"></input></li>
+	<li>Use a faster algorithm? (possibly lower quality on certain inputs) <input type="checkbox" id="quickseek"></input></li>
+	<li><button onclick="play()">Stretch!</button></li>
+</ol>
+<p>Note: In this demo, the stretching is done before playback (for simplicity). Most inputs should take less than a second to process, but some may take more than that (depending on the stretch factor, the algorithm used, and the audio itself). You can open up the developer console to see stretching progress.</p>
+<p>Kali can also be used for realtime processing. Demo coming soon.</p>
+</body>
+<script src="/kali.min.js"></script>
+<script>
+
+/* Example usage of Kali
+ * Copyright (c) 2015 Vivek Panyam
+ *
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or (at
+ * your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+
+var context = new (AudioContext)();
+
+
+function doStretch(inputData, stretchFactor, numChannels) {
+	var numInputFrames = inputData.length / numChannels;
+	var bufsize = 4096 * numChannels;
+
+	// Create a Kali instance and initialize it
+	var kali = new Kali(numChannels);
+	kali.setup(context.sampleRate, stretchFactor, document.getElementById("quickseek").checked);
+
+	// Create an array for the stretched output
+	var completed = new Float32Array((numInputFrames / stretchFactor) * numChannels + 1);
+
+	var inputOffset = 0;
+	var completedOffset = 0;
+	var loopCount = 0;
+	var flushed = false;
+
+	while (completedOffset < completed.length) {
+		if (loopCount % 100 == 0) {
+			console.log("Stretching", completedOffset  / completed.length);
+		}
+
+		// Read stretched samples into our output array
+		completedOffset += kali.output(completed.subarray(completedOffset, Math.min(completedOffset + bufsize, completed.length)));
+		
+		if (inputOffset < inputData.length) { // If we have more data to write, write it
+			var dataToInput = inputData.subarray(inputOffset, Math.min(inputOffset + bufsize, inputData.length));
+			inputOffset += dataToInput.length;
+			
+			// Feed Kali samples
+			kali.input(dataToInput);
+			kali.process();
+		} else if (!flushed) { // Flush if we haven't already
+			kali.flush();
+			flushed = true;
+		}
+
+		loopCount++;
+	}
+
+	return completed;
+}
+
+
+// Mono stretch
+function play() {
+	window.play = null;
+	context.decodeAudioData(window.fileBuffer, function(audiobuffer) {
+		var inputData = audiobuffer.getChannelData(0);
+		console.log("Ready to stretch")
+		var output = doStretch(inputData, parseFloat(document.getElementById("rate").value), 1);
+
+		var outputAudioBuffer = context.createBuffer(1, output.length, context.sampleRate);
+		outputAudioBuffer.getChannelData(0).set(output);
+
+		var source = context.createBufferSource();
+		source.buffer = outputAudioBuffer;
+		source.connect(context.destination);
+		source.start();
+	})
+}
+
+function handleFileSelect(e) {
+	e.stopPropagation();
+	e.preventDefault();
+
+	console.log(e)
+
+	var f = e.dataTransfer.files[0];
+	console.log(f);
+	var reader = new FileReader();
+	reader.onload = function(e) {
+		window.fileBuffer = e.target.result;
+	}
+
+	document.getElementById("fname").innerHTML = f.name
+
+	reader.readAsArrayBuffer(f);
+}
+
+function handleDragOver(evt) {
+	evt.stopPropagation();
+	evt.preventDefault();
+	evt.dataTransfer.dropEffect = 'copy';
+}
+
+var dropZone = document.getElementById('drop_zone');
+dropZone.addEventListener('dragover', handleDragOver, false);
+dropZone.addEventListener('drop', handleFileSelect, false);
+</script>
+
+</html>
