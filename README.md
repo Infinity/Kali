@@ -39,6 +39,8 @@ Once you're done feeding data, tell Kali to flush its buffers and continue readi
 
 That's it! See `Test.ts` in the examples folder for a complete example of usage.
 
+If you want to change tempo during stretching, you can call `setTempo` (with a new stretch factor) while feeding data. This will let you smoothly change between tempos. See `Test.ts` for an example.
+
 ##Documentation
 
 For complete documentation, see [https://kali.readme.io/docs](https://kali.readme.io/docs)

@@ -97,7 +97,11 @@ class TypedQueue<T extends TypedArray> {
 	}
 
 	public read(data: T, n: int) : void {
-		// TODO do checks on n here
+		if (n + this.begin > this.end) {
+			console.error("Read out of bounds", n, this.end, this.begin);
+		}
+
+
 		if (data != null) {
 			data.set(this.buffer.subarray(this.begin, this.begin + n));
 		}
@@ -106,6 +110,10 @@ class TypedQueue<T extends TypedArray> {
 	}
 
 	public read_ptr(start: int, end: int = -1) : T {
+		if (end > this.occupancy()) {
+			console.error("Read Pointer out of bounds", end);
+		}
+
 		if (end < 0) {
 			end = this.occupancy();
 		}

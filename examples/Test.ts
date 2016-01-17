@@ -18,6 +18,9 @@
 
 import Kali = require("../src/Kali");
 
+var START_RATE = 1.7;
+var TARGET_RATE = 1;
+
 // Load audio
 var context = new (AudioContext)();
 
@@ -44,17 +47,24 @@ function doStretch(inputData : Float32Array, stretchFactor: number, numChannels:
 	var kali = new Kali(numChannels);
 	kali.setup(44100, stretchFactor);
 
-	// Create an array for the stretched output
-	var completed = new Float32Array((numInputFrames / stretchFactor) * numChannels + 1);
+	// Create an array for the stretched output. Note if the rate is changing, this array won't be completely full
+	var completed = new Float32Array((numInputFrames / Math.min(START_RATE, TARGET_RATE)) * numChannels + 1);
 
 	var inputOffset: number = 0;
 	var completedOffset: number = 0;
 	var loopCount: number = 0;
 	var flushed = false;
 
-	while (completedOffset < completed.length) {
-		if (loopCount % 100 == 0) {
-			console.log("Stretching", completedOffset  / completed.length);
+	while (completedOffset < completed.length && inputOffset < inputData.length) {
+		if (loopCount % 50 == 0) {
+			console.log("Stretching", inputOffset  / inputData.length);
+			if (stretchFactor > TARGET_RATE) {
+				stretchFactor = Math.max(TARGET_RATE, stretchFactor - 0.05);
+			} else {
+				stretchFactor = Math.min(TARGET_RATE, stretchFactor + 0.05);
+			}
+
+			kali.setTempo(stretchFactor);
 		}
 
 		// Read stretched samples into our output array
@@ -84,7 +94,7 @@ function play() {
 	loadAudio('/test.mp3', function(audiobuffer: AudioBuffer) {
 		var inputData = audiobuffer.getChannelData(0);
 		console.log("Ready to stretch")
-		var output = doStretch(inputData, 120/125);
+		var output = doStretch(inputData, START_RATE);
 
 		var outputAudioBuffer = context.createBuffer(1, output.length, context.sampleRate);
 		outputAudioBuffer.getChannelData(0).set(output);

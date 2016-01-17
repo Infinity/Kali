@@ -69,6 +69,8 @@
 	 * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 	 */
 	var Kali = __webpack_require__(2);
+	var START_RATE = 1.7;
+	var TARGET_RATE = 1;
 	// Load audio
 	var context = new (AudioContext)();
 	function loadAudio(url, callback) {
@@ -89,15 +91,22 @@
 	    // Create a Kali instance and initialize it
 	    var kali = new Kali(numChannels);
 	    kali.setup(44100, stretchFactor);
-	    // Create an array for the stretched output
-	    var completed = new Float32Array((numInputFrames / stretchFactor) * numChannels + 1);
+	    // Create an array for the stretched output. Note if the rate is changing, this array won't be completely full
+	    var completed = new Float32Array((numInputFrames / Math.min(START_RATE, TARGET_RATE)) * numChannels + 1);
 	    var inputOffset = 0;
 	    var completedOffset = 0;
 	    var loopCount = 0;
 	    var flushed = false;
-	    while (completedOffset < completed.length) {
-	        if (loopCount % 100 == 0) {
-	            console.log("Stretching", completedOffset / completed.length);
+	    while (completedOffset < completed.length && inputOffset < inputData.length) {
+	        if (loopCount % 50 == 0) {
+	            console.log("Stretching", inputOffset / inputData.length);
+	            if (stretchFactor > TARGET_RATE) {
+	                stretchFactor = Math.max(TARGET_RATE, stretchFactor - 0.05);
+	            }
+	            else {
+	                stretchFactor = Math.min(TARGET_RATE, stretchFactor + 0.05);
+	            }
+	            kali.setTempo(stretchFactor);
 	        }
 	        // Read stretched samples into our output array
 	        completedOffset += kali.output(completed.subarray(completedOffset, Math.min(completedOffset + bufsize, completed.length)));
@@ -121,7 +130,7 @@
 	    loadAudio('/test.mp3', function (audiobuffer) {
 	        var inputData = audiobuffer.getChannelData(0);
 	        console.log("Ready to stretch");
-	        var output = doStretch(inputData, 120 / 125);
+	        var output = doStretch(inputData, START_RATE);
 	        var outputAudioBuffer = context.createBuffer(1, output.length, context.sampleRate);
 	        outputAudioBuffer.getChannelData(0).set(output);
 	        var source = context.createBufferSource();
@@ -166,6 +175,8 @@
 	}
 	var tempo_t = (function () {
 	    function tempo_t() {
+	        this.is_initialized = false;
+	        this.sample_rate = 44100;
 	        this.channels = 0;
 	        this.quick_search = false;
 	        this.factor = 0;
@@ -276,8 +287,7 @@
 	            t.overlap_buf.set(t.input_fifo.read_ptr(t.channels * (offset + t.segment - t.overlap)).subarray(0, numToCopy));
 	            /* Advance through the input stream */
 	            t.segments_total++;
-	            skip = handleInt(t.factor * (t.segments_total * (t.segment - t.overlap)) + 0.5);
-	            t.skip_total += skip -= t.skip_total;
+	            skip = handleInt(t.factor * (t.segment - t.overlap) + 0.5);
 	            t.input_fifo.read(null, skip);
 	        }
 	    };
@@ -320,6 +330,8 @@
 	        if (search_ms === void 0) { search_ms = null; }
 	        if (overlap_ms === void 0) { overlap_ms = null; }
 	        var profile = 1;
+	        var t = this.t;
+	        t.sample_rate = sample_rate;
 	        if (segment_ms == null) {
 	            segment_ms = Math.max(10, Kali.segments_ms[profile] / Math.max(Math.pow(factor, Kali.segments_pow[profile]), 1));
 	        }
@@ -330,7 +342,6 @@
 	            overlap_ms = segment_ms / Kali.overlaps_div[profile];
 	        }
 	        var max_skip;
-	        var t = this.t;
 	        t.quick_search = quick_search;
 	        t.factor = factor;
 	        t.segment = handleInt(sample_rate * segment_ms / 1000 + .5);
@@ -339,10 +350,28 @@
 	        if (t.overlap * 2 > t.segment) {
 	            t.overlap -= 8;
 	        }
-	        t.overlap_buf = new Float32Array(t.overlap * t.channels);
+	        if (!t.is_initialized) {
+	            t.overlap_buf = new Float32Array(t.overlap * t.channels);
+	        }
+	        else {
+	            var new_overlap = new Float32Array(t.overlap * t.channels);
+	            var start = 0;
+	            if (t.overlap * t.channels < t.overlap_buf.length) {
+	                start = t.overlap_buf.length - (t.overlap * t.channels);
+	            }
+	            new_overlap.set(t.overlap_buf.subarray(start, t.overlap_buf.length));
+	            t.overlap_buf = new_overlap;
+	        }
 	        max_skip = handleInt(Math.ceil(factor * (t.segment - t.overlap)));
 	        t.process_size = Math.max(max_skip + t.overlap, t.segment) + t.search;
-	        t.input_fifo.reserve(t.search / 2);
+	        if (!t.is_initialized) {
+	            t.input_fifo.reserve(handleInt(t.search / 2));
+	        }
+	        t.is_initialized = true;
+	    };
+	    Kali.prototype.setTempo = function (factor) {
+	        var t = this.t;
+	        this.setup(t.sample_rate, factor, t.quick_search);
 	    };
 	    Kali.segments_ms = [82, 82, 35, 20];
 	    Kali.segments_pow = [0, 1, .33, 1];
@@ -423,7 +452,9 @@
 	        return this.buffer.subarray(offset, offset + n);
 	    };
 	    TypedQueue.prototype.read = function (data, n) {
-	        // TODO do checks on n here
+	        if (n + this.begin > this.end) {
+	            console.error("Read out of bounds", n, this.end, this.begin);
+	        }
 	        if (data != null) {
 	            data.set(this.buffer.subarray(this.begin, this.begin + n));
 	        }
@@ -431,6 +462,9 @@
 	    };
 	    TypedQueue.prototype.read_ptr = function (start, end) {
 	        if (end === void 0) { end = -1; }
+	        if (end > this.occupancy()) {
+	            console.error("Read Pointer out of bounds", end);
+	        }
 	        if (end < 0) {
 	            end = this.occupancy();
 	        }

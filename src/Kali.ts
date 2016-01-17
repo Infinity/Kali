@@ -41,6 +41,8 @@ type uint64_t = number;
 
 
 class tempo_t {
+	public is_initialized: boolean = false;
+	public sample_rate: size_t = 44100;
 	public channels: size_t = 0;
 	public quick_search: boolean = false;
 	public factor: double = 0;
@@ -175,9 +177,7 @@ class Kali {
 
 			/* Advance through the input stream */
 			t.segments_total++;
-			skip = handleInt(t.factor * (t.segments_total * (t.segment - t.overlap)) + 0.5);
-			
-			t.skip_total += skip -= t.skip_total;
+			skip = handleInt(t.factor * (t.segment - t.overlap) + 0.5);
 			t.input_fifo.read(null, skip);
 
 		}
@@ -231,6 +231,8 @@ class Kali {
 				 overlap_ms: double = null): void {
 
 		var profile = 1;
+		var t = this.t;
+		t.sample_rate = sample_rate;
 
 		if (segment_ms == null) {
 			segment_ms = Math.max(10, Kali.segments_ms[profile] / Math.max(Math.pow(factor, Kali.segments_pow[profile]), 1));
@@ -245,7 +247,6 @@ class Kali {
 		}
 
 		var max_skip: size_t;
-		var t = this.t;
 		t.quick_search = quick_search;
 		t.factor = factor;
 		t.segment = handleInt(sample_rate * segment_ms / 1000 + .5);
@@ -255,10 +256,31 @@ class Kali {
 			t.overlap -= 8;
 		}
 
-		t.overlap_buf = new Float32Array(t.overlap * t.channels);
+		if (!t.is_initialized) {
+			t.overlap_buf = new Float32Array(t.overlap * t.channels);
+		} else {
+			var new_overlap = new Float32Array(t.overlap * t.channels);
+			var start = 0;
+			if (t.overlap * t.channels < t.overlap_buf.length) {
+				start = t.overlap_buf.length - (t.overlap * t.channels);
+			}
+
+			new_overlap.set(t.overlap_buf.subarray(start, t.overlap_buf.length));
+			t.overlap_buf = new_overlap;
+		}
+
 		max_skip = handleInt(Math.ceil(factor * (t.segment - t.overlap)));
 		t.process_size = Math.max(max_skip + t.overlap, t.segment) + t.search;
-		t.input_fifo.reserve(t.search / 2);
+		if (!t.is_initialized) {
+			t.input_fifo.reserve(handleInt(t.search / 2));
+		}
+
+		t.is_initialized = true;
+	}
+
+	public setTempo(factor : double) {
+		var t = this.t;
+		this.setup(t.sample_rate, factor, t.quick_search);
 	}
 
 	constructor(channels: size_t) {
