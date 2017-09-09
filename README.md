@@ -1,4 +1,4 @@
-#Kali
+# Kali
 Kali is used for realtime time-stretching and pitch shifting in Javascript. It can change Tempo and Pitch independently.
 
 From Wikipedia:
@@ -6,16 +6,16 @@ From Wikipedia:
 
 Kali uses a WSOLA-like algorithm to do high-quality time stretching in the browser
 
-##Demo
+## Demo
 Try a demo [here](http://infinity.github.io/Kali/demo.html).
 
-##Getting Started
+## Getting Started
 
 Get Kali from the [releases page](https://github.com/Infinity/Kali/releases).
 
 Kali will be published to npm soon.
 
-##Basic Usage
+## Basic Usage
 Create a new instance
 
     var kali = new Kali(numChannels);
@@ -45,10 +45,10 @@ If you want to change tempo during stretching, you can call `setTempo` (with a n
 
 For complete documentation, see [https://kali.readme.io/docs](https://kali.readme.io/docs)
 
-##Efficiency
+## Efficiency
 By using TypedArrays and views on TypedArrays, Kali operates very efficiently. That said, this is an early release and performance hasn't been optimized as much as possible. Pull requests are welcome!
 
-##Running Examples
+## Running Examples
 
  - Clone or download this repository
  - Put an mp3 file named `test.mp3` in the `build/examples` directory
@@ -61,7 +61,7 @@ The developer console will show the progress of the file being stretched. Once t
 
 To change this (or anything else about the example), edit `Test.ts` in the `examples` directory and build as shown below.
 
-##Building
+## Building
 
     npm install
 
@@ -74,7 +74,7 @@ To change this (or anything else about the example), edit `Test.ts` in the `exam
     // build minified Kali
     webpack -p
 
-##License
+## License
 LGPL
 
 Kali is based on ideas and code from [SoundTouch](http://www.surina.net/soundtouch/) and [libsox](http://sox.sourceforge.net/), both of which are LGPL. Therefore, Kali is also LGPL
