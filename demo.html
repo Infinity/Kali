@@ -44,7 +44,7 @@ body {
  */
 
 
-var context = new (webkitAudioContext || AudioContext)();
+var context = new (typeof AudioContext !== 'undefined' ? AudioContext : webkitAudioContext)();
 
 
 function doStretch(inputData, stretchFactor, numChannels) {
